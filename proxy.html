@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Proxy</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js" integrity="sha512-F5QTlBqZlvuBEs9LQPqc1iZv2UMxcVXezbHzomzS6Df4MZMClge/8+gXrKw2fl5ysdk4rWjR0vKS7NNkfymaBQ==" crossorigin="anonymous"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,103 +14,85 @@
             margin: 0;
             background-color: #f0f0f0;
         }
-        #proxyForm {
+        #status {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        #url {
-            width: 300px;
-            padding: 10px;
-            font-size: 16px;
-        }
-        #requestSubmit {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        #status {
-            margin-top: 20px;
+            max-width: 80%;
         }
     </style>
 </head>
 <body>
-    <div id="proxyForm">
-        <form id="request" action="requests" method="post">
-            <input type="text" id="url" name="url" value="https://www.youtube.com" placeholder="Enter URL to access">
-            <input type="hidden" name="csrf" id="csrfToken" value="">
-            <button type="submit" id="requestSubmit"><i class="fa fa-arrow-right" aria-hidden="true"></i> Go!</button>
-        </form>
-        <div id="status"></div>
-    </div>
+    <div id="status">Подключение к YouTube через прокси...</div>
 
     <script>
         const statusElement = document.getElementById('status');
-        const csrfTokenInput = document.getElementById('csrfToken');
-        const form = document.getElementById('request');
+        const INITIAL_PROXY_URL = 'https://www.easyproxy.tech/?__cpo=1';
+        const BASE_PROXY_URL = 'https://www.easyproxy.tech';
+        const YOUTUBE_URL = 'https://www.youtube.com/';
 
         function updateStatus(message) {
             statusElement.innerHTML += `<p>${message}</p>`;
             console.log(message);
         }
 
-        async function getCSRFToken() {
+        async function getProxyUrl(url = YOUTUBE_URL) {
             try {
-                updateStatus('Получение CSRF токена...');
-                const response = await fetch('https://www.easyproxy.tech/');
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const csrfToken = doc.querySelector('input[name="csrf"]').value;
-                updateStatus('CSRF токен получен.');
-                return csrfToken;
-            } catch (error) {
-                updateStatus(`Ошибка при получении CSRF токена: ${error.message}`);
-                throw error;
-            }
-        }
+                // Шаг 1: Получаем начальную страницу
+                updateStatus('Получение начальной страницы...');
+                let response = await fetch(INITIAL_PROXY_URL);
+                let text = await response.text();
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(text, 'text/html');
 
-        async function submitForm(event) {
-            event.preventDefault();
-            try {
-                const csrfToken = await getCSRFToken();
-                csrfTokenInput.value = csrfToken;
-                
-                updateStatus('Отправка запроса...');
-                const formData = new FormData(form);
-                const response = await fetch('https://www.easyproxy.tech/requests', {
+                // Шаг 2: Ищем форму и извлекаем CSRF-токен
+                updateStatus('Извлечение CSRF-токена...');
+                let form = doc.querySelector('form#request');
+                let csrfToken = form.querySelector('input[name="csrf"]').value;
+
+                // Шаг 3: Отправляем POST-запрос
+                updateStatus('Отправка POST-запроса...');
+                let formData = new FormData();
+                formData.append('url', url);
+                formData.append('csrf', csrfToken);
+
+                response = await fetch(`${BASE_PROXY_URL}/requests`, {
                     method: 'POST',
                     body: formData,
                     redirect: 'manual'
                 });
 
                 if (response.type === 'opaqueredirect') {
-                    updateStatus('Получен редирект. Переход по новому URL...');
-                    window.location.href = response.url;
+                    updateStatus('Получен редирект.');
+                    return response.url;
                 } else {
-                    const text = await response.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(text, 'text/html');
-                    const metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
+                    updateStatus('Обработка ответа...');
+                    text = await response.text();
+                    doc = parser.parseFromString(text, 'text/html');
+                    let metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
                     if (metaRefresh) {
-                        const content = metaRefresh.getAttribute('content');
-                        const url = content.split('url=')[1];
-                        updateStatus(`Получен meta refresh. Переход по URL: ${url}`);
-                        window.location.href = url;
+                        let content = metaRefresh.getAttribute('content');
+                        return content.split('url=')[1];
                     } else {
-                        updateStatus('Не удалось получить URL для перехода.');
+                        return response.url;
                     }
                 }
             } catch (error) {
                 updateStatus(`Ошибка: ${error.message}`);
+                return null;
             }
         }
 
-        form.addEventListener('submit', submitForm);
+        window.onload = async function() {
+            const proxyUrl = await getProxyUrl();
+            if (proxyUrl) {
+                updateStatus(`Получен прокси URL. Перенаправление на: ${proxyUrl}`);
+                window.location.href = proxyUrl;
+            } else {
+                updateStatus('Не удалось получить прокси URL. Пожалуйста, попробуйте позже.');
+            }
+        }
     </script>
 </body>
 </html>
