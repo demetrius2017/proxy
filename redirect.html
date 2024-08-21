@@ -4,86 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Proxy Redirect</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+    <script>
+        window.onload = function() {
+            window.location.href = "https://www.easyproxy.tech/?__cpo=1";
         }
-        #message {
-            text-align: center;
-            padding: 20px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-    </style>
+    </script>
 </head>
 <body>
-    <div id="message">Redirecting to YouTube proxy...</div>
-
-    <script>
-        const PROXY_URL = 'https://www.easyproxy.tech';
-        const YOUTUBE_URL = 'https://www.youtube.com/';
-
-        async function getProxyUrl(url = YOUTUBE_URL) {
-            try {
-                // Шаг 1: Получаем начальную страницу
-                let response = await fetch(PROXY_URL);
-                let text = await response.text();
-                let parser = new DOMParser();
-                let doc = parser.parseFromString(text, 'text/html');
-
-                // Шаг 2: Ищем форму и извлекаем CSRF-токен
-                let form = doc.getElementById('request');
-                let csrfToken = form.querySelector('input[name="csrf"]').value;
-
-                // Шаг 3: Отправляем POST-запрос
-                let formData = new FormData();
-                formData.append('url', url);
-                formData.append('csrf', csrfToken);
-
-                response = await fetch(`${PROXY_URL}/requests`, {
-                    method: 'POST',
-                    body: formData,
-                    redirect: 'manual'
-                });
-
-                if (response.type === 'opaqueredirect') {
-                    // Если получен редирект, возвращаем URL из заголовка Location
-                    return response.url;
-                } else {
-                    // Если нет редиректа, ищем meta refresh
-                    text = await response.text();
-                    doc = parser.parseFromString(text, 'text/html');
-                    let metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
-                    if (metaRefresh) {
-                        let content = metaRefresh.getAttribute('content');
-                        return content.split('url=')[1];
-                    } else {
-                        return response.url;
-                    }
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                return null;
-            }
-        }
-
-        async function redirect() {
-            const proxyUrl = await getProxyUrl();
-            if (proxyUrl) {
-                window.location.href = proxyUrl;
-            } else {
-                document.getElementById('message').textContent = 'Error: Unable to get proxy URL. Please try again later.';
-            }
-        }
-
-        redirect();
-    </script>
+    <p>Redirecting to YouTube proxy...</p>
 </body>
 </html>

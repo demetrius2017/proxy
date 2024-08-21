@@ -6,7 +6,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 TOKEN = '6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE'
-REDIRECT_PAGE_URL = 'http://147.45.238.24/redirect.html'  # URL вашего сервера
+WEBHOOK_URL = 'https://147.45.238.24/webhook'  # Обратите внимание на https и /webhook
+REDIRECT_PAGE_URL = 'http://147.45.238.24/redirect.html'
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Получена команда /start")
@@ -30,7 +31,14 @@ def main() -> None:
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.Regex("^Открыть YouTube через прокси$"), open_youtube))
-    application.run_webhook(listen="0.0.0.0", port=8080, webhook_url=REDIRECT_PAGE_URL)
+    
+    # Запускаем webhook
+    application.run_webhook(
+        listen="0.0.0.0", 
+        port=8080, 
+        webhook_url=WEBHOOK_URL,
+        secret_token="your-secret-token",  # Добавьте секретный токен для безопасности
+    )
 
 if __name__ == '__main__':
     main()

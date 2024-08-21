@@ -39,8 +39,9 @@ jobs:
           # Переходим в директорию проекта
           cd /home/$USER/youtube_proxy_bot
 
-          # Заменяем placeholder в конфигурации Nginx
+          # Заменяем placeholders в конфигурации Nginx
           sed -i "s/SERVER_NAME_PLACEHOLDER/${HOST}/g" nginx_config.conf
+          sed -i "s/USER_PLACEHOLDER/${USER}/g" nginx_config.conf
 
           # Копируем конфигурацию Nginx
           sudo cp nginx_config.conf /etc/nginx/sites-available/youtube_proxy_bot
@@ -60,4 +61,20 @@ jobs:
 
           # Запускаем новый контейнер
           sudo docker run -d --name youtube_proxy_bot -p 8080:8080 --restart always youtube_proxy_bot
+
+          # Отладочная информация
+          echo "--- Nginx status ---"
+          sudo systemctl status nginx
+          
+          echo "--- Nginx configuration ---"
+          cat /etc/nginx/sites-enabled/youtube_proxy_bot
+          
+          echo "--- Docker container status ---"
+          sudo docker ps -a
+          
+          echo "--- Docker container logs ---"
+          sudo docker logs youtube_proxy_bot
+          
+          echo "--- Netstat for port 8080 ---"
+          sudo netstat -tulpn | grep :8080
         EOF
