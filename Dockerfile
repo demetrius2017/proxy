@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем остальные файлы проекта
 COPY . .
 
-# Открываем порт 8080
-EXPOSE 8080
+# Открываем порт 80
+EXPOSE 80
 
 # Запускаем бота
 CMD ["python", "main.py"]

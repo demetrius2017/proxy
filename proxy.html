@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Proxy</title>
+    <title>YouTube Proxy Redirect</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,53 +25,20 @@
 </head>
 <body>
     <div id="status">
-        Подключение к YouTube через прокси...
+        Перенаправление на YouTube...
     </div>
 
     <script>
-        const BACKEND_URL = '';  // Используем относительный путь
-
-        async function getProxyUrl() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/get_initial_page`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data.html, 'text/html');
-                const form = doc.querySelector('form#request');
-                const csrfToken = form.querySelector('input[name="csrf"]').value;
-
-                const submitResponse = await fetch(`${BACKEND_URL}/submit_request`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        url: 'https://www.youtube.com/',
-                        csrf: csrfToken
-                    }),
-                });
-
-                if (!submitResponse.ok) {
-                    throw new Error(`HTTP error! status: ${submitResponse.status}`);
-                }
-
-                const submitData = await submitResponse.json();
-                if (submitData.proxy_url) {
-                    window.location.href = submitData.proxy_url;
-                } else {
-                    document.getElementById('status').innerText = "Не удалось получить прокси URL. Пожалуйста, попробуйте позже.";
-                }
-            } catch (error) {
-                console.error("Ошибка при получении прокси URL:", error);
-                document.getElementById('status').innerText = "Произошла ошибка. Пожалуйста, попробуйте позже.";
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectUrl = urlParams.get('redirect_url');
+            
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
+            } else {
+                document.getElementById('status').innerText = "Ошибка: URL для перенаправления не найден";
             }
-        }
-
-        window.onload = getProxyUrl;
+        });
     </script>
 </body>
 </html>
