@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 TOKEN = '6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE'
-REDIRECT_PAGE_URL = 'http://147.45.238.24/redirect.html'  # URL вашего нового сервера
+REDIRECT_PAGE_URL = 'http://147.45.238.24/redirect.html'  # URL вашего сервера
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Получена команда /start")
