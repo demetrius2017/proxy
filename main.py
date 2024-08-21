@@ -68,6 +68,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Извините, произошла неожиданная ошибка. Пожалуйста, попробуйте позже.")
 
 def main() -> None:
+    logger.info("Запуск бота")
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.run_polling(allowed_updates=Update.ALL_TYPES)
