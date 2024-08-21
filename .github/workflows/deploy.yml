@@ -37,6 +37,10 @@ jobs:
           # Переходим в директорию проекта
           cd /home/$USER/youtube_proxy_bot
 
+          # Проверяем наличие файла proxy.html
+          echo "--- Checking proxy.html ---"
+          ls -l proxy.html || echo "proxy.html not found!"
+
           # Заменяем placeholders в конфигурации Nginx
           sed -i "s/SERVER_NAME_PLACEHOLDER/${HOST}/g" nginx_config.conf
           sed -i "s/USER_PLACEHOLDER/${USER}/g" nginx_config.conf
@@ -47,7 +51,15 @@ jobs:
           # Создаем символическую ссылку
           sudo ln -sf /etc/nginx/sites-available/youtube_proxy_bot /etc/nginx/sites-enabled/
 
-          # Проверяем конфигурацию Nginx и перезапускаем его
+          # Проверяем конфигурацию Nginx
+          echo "--- Nginx configuration ---"
+          cat /etc/nginx/sites-available/youtube_proxy_bot
+
+          # Проверяем и устанавливаем правильные права доступа
+          sudo chown -R www-data:www-data /home/$USER/youtube_proxy_bot
+          sudo chmod -R 755 /home/$USER/youtube_proxy_bot
+
+          # Перезапускаем Nginx
           sudo nginx -t && sudo systemctl restart nginx
 
           # Строим Docker образ
@@ -64,9 +76,6 @@ jobs:
           echo "--- Nginx status ---"
           sudo systemctl status nginx
           
-          echo "--- Nginx configuration ---"
-          cat /etc/nginx/sites-enabled/youtube_proxy_bot
-          
           echo "--- Docker container status ---"
           sudo docker ps -a
           
@@ -81,4 +90,7 @@ jobs:
           
           echo "--- Netstat for port 8080 on host ---"
           sudo netstat -tulpn | grep :8080
+
+          echo "--- Testing access to proxy.html ---"
+          curl -I http://localhost/proxy.html
         EOF
