@@ -1,36 +1,45 @@
-import logging
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+app = FastAPI()
 
-TOKEN = '6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE'
-PROXY_PAGE_URL = 'http://147.45.238.24/proxy.html'  # Обновлено с redirect.html на proxy.html
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Замените на конкретный домен в продакшене
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info("Получена команда /start")
-    keyboard = ReplyKeyboardMarkup([[KeyboardButton("Открыть YouTube через прокси")]], resize_keyboard=True)
-    await update.message.reply_text(
-        "Добро пожаловать! Нажмите кнопку ниже, чтобы открыть YouTube через наш прокси.",
-        reply_markup=keyboard
-    )
+PROXY_URL = 'https://www.easyproxy.tech/?__cpo=1'
+BASE_PROXY_URL = 'https://www.easyproxy.tech'
 
-async def open_youtube(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info("Запрос на открытие YouTube через прокси")
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Открыть YouTube", url=PROXY_PAGE_URL)]
-    ])
-    await update.message.reply_text(
-        "Нажмите на кнопку ниже, чтобы открыть YouTube через наш прокси.",
-        reply_markup=keyboard
-    )
+@app.get("/get_initial_page")
+async def get_initial_page(request: Request):
+    client_ip = request.client.host
+    async with httpx.AsyncClient() as client:
+        response = await client.get(PROXY_URL, headers={'X-Forwarded-For': client_ip})
+        return {"html": response.text}
 
-def main() -> None:
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.Regex("^Открыть YouTube через прокси$"), open_youtube))
-    application.run_polling()
+@app.post("/submit_request")
+async def submit_request(request: Request):
+    client_ip = request.client.host
+    data = await request.json()
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{BASE_PROXY_URL}/requests",
+            data=data,
+            headers={'X-Forwarded-For': client_ip},
+            allow_redirects=False
+        )
+        
+        if response.status_code in [301, 302, 303, 307, 308]:
+            return {"proxy_url": response.headers['Location']}
+        else:
+            return {"html": response.text}
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

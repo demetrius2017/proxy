@@ -28,8 +28,7 @@
 
     <script>
         const statusElement = document.getElementById('status');
-        const INITIAL_PROXY_URL = 'https://www.easyproxy.tech/?__cpo=1';
-        const BASE_PROXY_URL = 'https://www.easyproxy.tech';
+        const PROXY_SERVER_URL = 'http://147.45.238.24:8000';  // Замените на адрес вашего сервера
         const YOUTUBE_URL = 'https://www.youtube.com/';
 
         function updateStatus(message) {
@@ -37,79 +36,45 @@
             console.log(message);
         }
 
-        async function fetchWithCloudflareBypass(url, options = {}) {
-            const defaultOptions = {
-                mode: 'cors',
-                credentials: 'include',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
-                    'Cache-Control': 'max-age=0',
-                },
-            };
-
-            const mergedOptions = { ...defaultOptions, ...options };
-            mergedOptions.headers = { ...defaultOptions.headers, ...options.headers };
-
-            const response = await fetch(url, mergedOptions);
-
-            if (response.status === 503 && response.headers.get('server') === 'cloudflare') {
-                // Возможно, требуется решение JavaScript-задачи
-                const body = await response.text();
-                if (body.includes('jschl-answer')) {
-                    // Здесь нужно реализовать решение JavaScript-задачи Cloudflare
-                    updateStatus('Обнаружена проверка Cloudflare. Пожалуйста, подождите...');
-                    // Пока просто ждем несколько секунд и повторяем запрос
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    return fetchWithCloudflareBypass(url, options);
-                }
-            }
-
-            return response;
-        }
-
         async function getProxyUrl(url = YOUTUBE_URL) {
             try {
                 updateStatus('Получение начальной страницы...');
-                let response = await fetchWithCloudflareBypass(INITIAL_PROXY_URL);
-                let text = await response.text();
-                let parser = new DOMParser();
-                let doc = parser.parseFromString(text, 'text/html');
-
+                const initialResponse = await fetch(`${PROXY_SERVER_URL}/get_initial_page`);
+                const initialData = await initialResponse.json();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(initialData.html, 'text/html');
+                
                 updateStatus('Извлечение CSRF-токена...');
-                let form = doc.querySelector('form#request');
-                let csrfToken = form.querySelector('input[name="csrf"]').value;
+                const form = doc.querySelector('form#request');
+                const csrfToken = form.querySelector('input[name="csrf"]').value;
 
-                updateStatus('Отправка POST-запроса...');
-                let formData = new FormData();
-                formData.append('url', url);
-                formData.append('csrf', csrfToken);
-
-                response = await fetchWithCloudflareBypass(`${BASE_PROXY_URL}/requests`, {
+                updateStatus('Отправка запроса...');
+                const submitResponse = await fetch(`${PROXY_SERVER_URL}/submit_request`, {
                     method: 'POST',
-                    body: formData,
-                    redirect: 'manual'
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        csrf: csrfToken
+                    }),
                 });
 
-                if (response.type === 'opaqueredirect') {
-                    updateStatus('Получен редирект.');
-                    return response.url;
-                } else {
-                    updateStatus('Обработка ответа...');
-                    text = await response.text();
-                    doc = parser.parseFromString(text, 'text/html');
-                    let metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
+                const submitData = await submitResponse.json();
+
+                if (submitData.proxy_url) {
+                    return submitData.proxy_url;
+                } else if (submitData.html) {
+                    const submitDoc = parser.parseFromString(submitData.html, 'text/html');
+                    const metaRefresh = submitDoc.querySelector('meta[http-equiv="refresh"]');
                     if (metaRefresh) {
-                        let content = metaRefresh.getAttribute('content');
+                        const content = metaRefresh.getAttribute('content');
                         return content.split('url=')[1];
-                    } else {
-                        return response.url;
                     }
                 }
+
+                throw new Error('Не удалось получить прокси URL');
             } catch (error) {
                 updateStatus(`Ошибка: ${error.message}`);
                 return null;
