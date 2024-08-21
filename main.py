@@ -1,13 +1,12 @@
 import logging
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 TOKEN = '6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE'
-WEBHOOK_URL = 'https://147.45.238.24/webhook'  # Обратите внимание на https и /webhook
-REDIRECT_PAGE_URL = 'http://147.45.238.24/redirect.html'
+PROXY_PAGE_URL = 'http://147.45.238.24/proxy.html'
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Получена команда /start")
@@ -20,7 +19,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def open_youtube(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Запрос на открытие YouTube через прокси")
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Открыть YouTube", web_app=WebAppInfo(url=REDIRECT_PAGE_URL))]
+        [InlineKeyboardButton("Открыть YouTube", url=PROXY_PAGE_URL)]
     ])
     await update.message.reply_text(
         "Нажмите на кнопку ниже, чтобы открыть YouTube через наш прокси.",
@@ -31,14 +30,7 @@ def main() -> None:
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.Regex("^Открыть YouTube через прокси$"), open_youtube))
-    
-    # Запускаем webhook
-    application.run_webhook(
-        listen="0.0.0.0", 
-        port=8080, 
-        webhook_url=WEBHOOK_URL,
-        secret_token="your-secret-token",  # Добавьте секретный токен для безопасности
-    )
+    application.run_polling()
 
 if __name__ == '__main__':
     main()

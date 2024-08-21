@@ -3,14 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Proxy Redirect</title>
-    <script>
-        window.onload = function() {
-            window.location.href = "https://www.easyproxy.tech/?__cpo=1";
-        }
-    </script>
+    <title>YouTube Proxy</title>
 </head>
 <body>
-    <p>Redirecting to YouTube proxy...</p>
+    <h1>Подключение к YouTube через прокси...</h1>
+    <script>
+        async function getProxyUrl() {
+            const INITIAL_PROXY_URL = 'https://www.easyproxy.tech/?__cpo=1';
+            const BASE_PROXY_URL = 'https://www.easyproxy.tech';
+            const YOUTUBE_URL = 'https://www.youtube.com/';
+
+            try {
+                // Шаг 1: Получаем начальную страницу
+                let response = await fetch(INITIAL_PROXY_URL);
+                let text = await response.text();
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(text, 'text/html');
+
+                // Шаг 2: Ищем форму и извлекаем CSRF-токен
+                let form = doc.getElementById('request');
+                let csrfToken = form.querySelector('input[name="csrf"]').value;
+
+                // Шаг 3: Отправляем POST-запрос
+                let formData = new FormData();
+                formData.append('url', YOUTUBE_URL);
+                formData.append('csrf', csrfToken);
+
+                response = await fetch(`${BASE_PROXY_URL}/requests`, {
+                    method: 'POST',
+                    body: formData,
+                    redirect: 'manual'
+                });
+
+                if (response.type === 'opaqueredirect') {
+                    // Если получен редирект, возвращаем URL из заголовка Location
+                    return response.url;
+                } else {
+                    // Если нет редиректа, ищем meta refresh
+                    text = await response.text();
+                    doc = parser.parseFromString(text, 'text/html');
+                    let metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
+                    if (metaRefresh) {
+                        let content = metaRefresh.getAttribute('content');
+                        return content.split('url=')[1];
+                    } else {
+                        return response.url;
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                return null;
+            }
+        }
+
+        window.onload = async function() {
+            const proxyUrl = await getProxyUrl();
+            if (proxyUrl) {
+                window.location.href = proxyUrl;
+            } else {
+                document.body.innerHTML += '<p>Ошибка при получении прокси URL. Пожалуйста, попробуйте позже.</p>';
+            }
+        }
+    </script>
 </body>
 </html>
