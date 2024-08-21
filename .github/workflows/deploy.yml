@@ -1,0 +1,30 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main  # или master, в зависимости от названия вашей основной ветки
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install sshpass
+      run: sudo apt-get install sshpass
+
+    - name: Deploy to server
+      env:
+        HOST: ${{ secrets.HOST }}
+        USER: ${{ secrets.USER }}
+        PASS: ${{ secrets.PASSWORD }}
+      run: |
+        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+          cd /home/$USER/youtube_proxy_bot
+          git pull origin main
+          source venv/bin/activate
+          pip install -r requirements.txt
+          sudo systemctl restart youtube_proxy_bot
+        EOF
