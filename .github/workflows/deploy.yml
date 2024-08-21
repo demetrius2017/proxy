@@ -24,6 +24,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker.io sshpass net-tools
 
+          # Очистка старых образов и контейнеров
+          echo "--- Cleaning up old Docker images and containers ---"
+          sudo docker image prune -af
+          sudo docker container prune -f
+
           # Создаем директорию проекта, если её нет
           mkdir -p /home/$USER/youtube_proxy_bot
 
@@ -82,15 +87,18 @@ jobs:
           echo "--- Docker container logs ---"
           sudo docker logs youtube_proxy_bot 2>&1 | tail -n 50
           
-          echo "--- Python application status ---"
-          sudo docker exec youtube_proxy_bot ps aux
-          
-          echo "--- Check if application is listening on port 8080 ---"
-          sudo docker exec youtube_proxy_bot netstat -tulpn | grep :8080
-          
           echo "--- Netstat for port 8080 on host ---"
           sudo netstat -tulpn | grep :8080
 
           echo "--- Testing access to proxy.html ---"
           curl -I http://localhost/proxy.html
+
+          echo "--- Nginx error log ---"
+          sudo tail -n 50 /var/log/nginx/error.log
+
+          echo "--- Directory contents ---"
+          ls -R /home/$USER/youtube_proxy_bot
+
+          echo "--- Disk usage ---"
+          df -h
         EOF
