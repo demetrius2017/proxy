@@ -101,4 +101,8 @@ jobs:
 
           echo "--- Disk usage ---"
           df -h
+
+          # Проверяем содержимое proxy.html
+          echo "--- Content of proxy.html ---"
+          cat /home/$USER/youtube_proxy_bot/proxy.html
         EOF
