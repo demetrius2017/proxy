@@ -37,27 +37,59 @@
             console.log(message);
         }
 
+        async function fetchWithCloudflareBypass(url, options = {}) {
+            const defaultOptions = {
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Cache-Control': 'max-age=0',
+                },
+            };
+
+            const mergedOptions = { ...defaultOptions, ...options };
+            mergedOptions.headers = { ...defaultOptions.headers, ...options.headers };
+
+            const response = await fetch(url, mergedOptions);
+
+            if (response.status === 503 && response.headers.get('server') === 'cloudflare') {
+                // Возможно, требуется решение JavaScript-задачи
+                const body = await response.text();
+                if (body.includes('jschl-answer')) {
+                    // Здесь нужно реализовать решение JavaScript-задачи Cloudflare
+                    updateStatus('Обнаружена проверка Cloudflare. Пожалуйста, подождите...');
+                    // Пока просто ждем несколько секунд и повторяем запрос
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    return fetchWithCloudflareBypass(url, options);
+                }
+            }
+
+            return response;
+        }
+
         async function getProxyUrl(url = YOUTUBE_URL) {
             try {
-                // Шаг 1: Получаем начальную страницу
                 updateStatus('Получение начальной страницы...');
-                let response = await fetch(INITIAL_PROXY_URL);
+                let response = await fetchWithCloudflareBypass(INITIAL_PROXY_URL);
                 let text = await response.text();
                 let parser = new DOMParser();
                 let doc = parser.parseFromString(text, 'text/html');
 
-                // Шаг 2: Ищем форму и извлекаем CSRF-токен
                 updateStatus('Извлечение CSRF-токена...');
                 let form = doc.querySelector('form#request');
                 let csrfToken = form.querySelector('input[name="csrf"]').value;
 
-                // Шаг 3: Отправляем POST-запрос
                 updateStatus('Отправка POST-запроса...');
                 let formData = new FormData();
                 formData.append('url', url);
                 formData.append('csrf', csrfToken);
 
-                response = await fetch(`${BASE_PROXY_URL}/requests`, {
+                response = await fetchWithCloudflareBypass(`${BASE_PROXY_URL}/requests`, {
                     method: 'POST',
                     body: formData,
                     redirect: 'manual'
