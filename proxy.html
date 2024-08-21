@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,81 +15,63 @@
             background-color: #f0f0f0;
         }
         #status {
-            background-color: white;
+            text-align: center;
             padding: 20px;
+            background-color: white;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            max-width: 80%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <div id="status">Подключение к YouTube через прокси...</div>
+    <div id="status">
+        Подключение к YouTube через прокси...
+    </div>
 
     <script>
-        const statusElement = document.getElementById('status');
-        const PROXY_SERVER_URL = 'http://147.45.238.24:8000';  // Замените на адрес вашего сервера
-        const YOUTUBE_URL = 'https://www.youtube.com/';
+        const BACKEND_URL = '';  // Используем относительный путь
 
-        function updateStatus(message) {
-            statusElement.innerHTML += `<p>${message}</p>`;
-            console.log(message);
-        }
-
-        async function getProxyUrl(url = YOUTUBE_URL) {
+        async function getProxyUrl() {
             try {
-                updateStatus('Получение начальной страницы...');
-                const initialResponse = await fetch(`${PROXY_SERVER_URL}/get_initial_page`);
-                const initialData = await initialResponse.json();
+                const response = await fetch(`${BACKEND_URL}/get_initial_page`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
                 
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(initialData.html, 'text/html');
-                
-                updateStatus('Извлечение CSRF-токена...');
+                const doc = parser.parseFromString(data.html, 'text/html');
                 const form = doc.querySelector('form#request');
                 const csrfToken = form.querySelector('input[name="csrf"]').value;
 
-                updateStatus('Отправка запроса...');
-                const submitResponse = await fetch(`${PROXY_SERVER_URL}/submit_request`, {
+                const submitResponse = await fetch(`${BACKEND_URL}/submit_request`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        url: url,
+                        url: 'https://www.youtube.com/',
                         csrf: csrfToken
                     }),
                 });
 
-                const submitData = await submitResponse.json();
-
-                if (submitData.proxy_url) {
-                    return submitData.proxy_url;
-                } else if (submitData.html) {
-                    const submitDoc = parser.parseFromString(submitData.html, 'text/html');
-                    const metaRefresh = submitDoc.querySelector('meta[http-equiv="refresh"]');
-                    if (metaRefresh) {
-                        const content = metaRefresh.getAttribute('content');
-                        return content.split('url=')[1];
-                    }
+                if (!submitResponse.ok) {
+                    throw new Error(`HTTP error! status: ${submitResponse.status}`);
                 }
 
-                throw new Error('Не удалось получить прокси URL');
+                const submitData = await submitResponse.json();
+                if (submitData.proxy_url) {
+                    window.location.href = submitData.proxy_url;
+                } else {
+                    document.getElementById('status').innerText = "Не удалось получить прокси URL. Пожалуйста, попробуйте позже.";
+                }
             } catch (error) {
-                updateStatus(`Ошибка: ${error.message}`);
-                return null;
+                console.error("Ошибка при получении прокси URL:", error);
+                document.getElementById('status').innerText = "Произошла ошибка. Пожалуйста, попробуйте позже.";
             }
         }
 
-        window.onload = async function() {
-            const proxyUrl = await getProxyUrl();
-            if (proxyUrl) {
-                updateStatus(`Получен прокси URL. Перенаправление на: ${proxyUrl}`);
-                window.location.href = proxyUrl;
-            } else {
-                updateStatus('Не удалось получить прокси URL. Пожалуйста, попробуйте позже.');
-            }
-        }
+        window.onload = getProxyUrl;
     </script>
 </body>
 </html>
