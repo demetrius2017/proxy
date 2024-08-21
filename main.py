@@ -30,7 +30,7 @@ def main() -> None:
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.Regex("^Открыть YouTube через прокси$"), open_youtube))
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_webhook(listen="0.0.0.0", port=8080, webhook_url=REDIRECT_PAGE_URL)
 
 if __name__ == '__main__':
     main()

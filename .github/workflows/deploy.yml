@@ -12,28 +12,30 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Install sshpass
-      run: sudo apt-get install sshpass
-
     - name: Deploy to server
       env:
         HOST: ${{ secrets.HOST }}
         USER: ${{ secrets.USER }}
         PASS: ${{ secrets.PASSWORD }}
       run: |
+        sudo apt-get update && sudo apt-get install -y sshpass
         sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
           # Обновляем пакеты и устанавливаем Docker, если его нет
           sudo apt-get update
-          if ! command -v docker &> /dev/null; then
-            sudo apt-get install -y docker.io
-          fi
+          sudo apt-get install -y docker.io sshpass
+          sudo systemctl start docker
+          sudo systemctl enable docker
 
           # Создаем директорию проекта, если её нет
           mkdir -p /home/$USER/youtube_proxy_bot
 
-          # Копируем файлы проекта на сервер
-          sshpass -p $PASS scp -r ./* $USER@$HOST:/home/$USER/youtube_proxy_bot/
+          # Выходим из SSH сессии, чтобы выполнить scp
+        EOF
 
+        # Копируем файлы проекта на сервер
+        sshpass -p $PASS scp -r ./* $USER@$HOST:/home/$USER/youtube_proxy_bot/
+
+        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
           # Переходим в директорию проекта
           cd /home/$USER/youtube_proxy_bot
 
@@ -45,7 +47,7 @@ jobs:
           sudo docker rm youtube_proxy_bot || true
 
           # Запускаем новый контейнер
-          sudo docker run -d --name youtube_proxy_bot --restart always youtube_proxy_bot
+          sudo docker run -d --name youtube_proxy_bot -p 8080:8080 --restart always youtube_proxy_bot
 
           # Настраиваем Nginx для проксирования запросов к контейнеру
           echo "server {
