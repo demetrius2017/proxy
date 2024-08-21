@@ -5,6 +5,12 @@ from bs4 import BeautifulSoup
 import logging
 from telegram import Update, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
+from flask import Flask, render_template, request, redirect
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('proxy.html')
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

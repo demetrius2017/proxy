@@ -75,7 +75,7 @@ jobs:
           sudo docker rm youtube_proxy_bot || true
 
           # Запускаем новый контейнер
-          sudo docker run -d --name youtube_proxy_bot -p 8080:8080 --restart always youtube_proxy_bot
+          sudo docker run -d --name youtube_proxy_bot -p 8080:8080 --network host youtube_proxy_bot
 
           # Отладочная информация
           echo "--- Nginx status ---"

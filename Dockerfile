@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8080
 
 # Запускаем бота
-CMD ["python", "main.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "main:app"]
