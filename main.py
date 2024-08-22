@@ -1,4 +1,5 @@
 import aiohttp
+import base64
 import asyncio
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
@@ -97,13 +98,16 @@ async def get_proxy_url(url: str = YOUTUBE_URL) -> str:
             logger.info(f"Получен короткий URL: {short_url}")
 
             await browser.close()
-            current_url = page.url
-            logger.info(f"Текущий URL после загрузки: {current_url}")
 
-            # Если короткая ссылка не найдена, возвращаем текущий URL
-            logger.info(f"Возвращаем текущий URL как прокси-ссылку: {current_url}")
-            await browser.close()
-            return current_url
+            # Если мы получили https://m.youtube.com/, то кодируем в Base64
+            if short_url == 'https://m.youtube.com/':
+                base_url = 'https://www.youtube.com'
+                encoded_url = base64.b64encode(base_url.encode('utf-8')).decode('utf-8')
+                proxy_link = f'https://easyproxy.tech/?__cpo={encoded_url}'
+                logger.info(f"Возвращаем прокси-ссылку: {proxy_link}")
+                return proxy_link
+            else:
+                return short_url
 
     except Exception as e:
         logger.error(f"Произошла ошибка при получении прокси-ссылки: {str(e)}")
