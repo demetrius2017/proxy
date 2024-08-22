@@ -3,3 +3,4 @@ beautifulsoup4==4.12.2
 playwright==1.39.0
 python-telegram-bot==20.6
 base64
+requests
