@@ -1,44 +1,36 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Proxy Redirect</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        #status {
-            text-align: center;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-    </style>
+    <title>YouTube Proxy</title>
 </head>
 <body>
-    <div id="status">
-        Перенаправление на YouTube...
-    </div>
-
+    <div id="status">Подключение к YouTube через прокси...</div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectUrl = urlParams.get('redirect_url');
-            
-            if (redirectUrl) {
-                window.location.href = redirectUrl;
-            } else {
-                document.getElementById('status').innerText = "Ошибка: URL для перенаправления не найден";
+        const workerUrl = 'https://your-worker-subdomain.easyproxy.tech';
+
+        async function getProxyUrl() {
+            try {
+                const response = await fetch(workerUrl);
+                if (response.redirected) {
+                    return response.url;
+                }
+                throw new Error('Не удалось получить прокси URL');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                return null;
             }
-        });
+        }
+
+        window.onload = async function() {
+            const proxyUrl = await getProxyUrl();
+            if (proxyUrl) {
+                window.location.href = proxyUrl;
+            } else {
+                document.getElementById('status').textContent = 'Не удалось получить прокси URL. Пожалуйста, попробуйте позже.';
+            }
+        }
     </script>
 </body>
 </html>
