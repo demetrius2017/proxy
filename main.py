@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 PROXY_URL = 'https://www.easyproxy.tech'
-YOUTUBE_URL = 'https://www.youtube.com/'
+YOUTUBE_URL = 'https://2ip.ru'
 TOKEN = '6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE'
 
 
@@ -59,49 +59,51 @@ async def get_proxy_url(url: str = YOUTUBE_URL) -> str:
 
         # Шаг 2: Обработка длинной ссылки с помощью Playwright
         async with async_playwright() as p:
+            # Открываем браузер в headless режиме (без интерфейса)
             browser = await p.chromium.launch(headless=True)
-            # Устанавливаем iPhone user-agent
+
+            # Устанавливаем заголовки (включая User-Agent и другие стандартные заголовки)
             iphone_user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
-            
-            # Открываем новую страницу с указанием user-agent
-            page = await browser.new_page(user_agent=iphone_user_agent)
+            page = await browser.new_page(
+                user_agent=iphone_user_agent,
+                extra_http_headers={
+                    "Referer": "https://www.google.com",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                }
+            )
 
             # Переходим по длинной ссылке
             await page.goto(url)
 
-            # Ждем полной загрузки страницы
+            # Ждем полной загрузки страницы и исполнения всех скриптов
             await page.wait_for_load_state('networkidle', timeout=60000)
 
+            # Проверяем содержимое страницы каждые 2 секунды
             is_launching = True
             while is_launching:
-                try:
-                    # Ожидаем событие навигации, т.е. перехода на другую страницу
-                    await page.wait_for_event('framenavigated', timeout=60000)
+                # Проверяем текущий URL и содержимое страницы
+                current_url = page.url
+                logger.info(f"Текущий URL: {current_url}")
 
-                    # Получаем текущий URL
-                    current_url = page.url
-                    logger.info(f"Текущий URL: {current_url}")
+                page_content = await page.content()
+                logger.info(f"Содержимое страницы: {page_content[:500]}")  # Логируем первые 500 символов
 
-                    # Проверяем содержимое страницы
-                    page_content = await page.content()
-                    
-                    # Если сообщение "Proxy is launching..." отсутствует, заканчиваем ожидание
-                    if "Proxy is launching..." not in page_content:
-                        is_launching = False
+                # Если "Proxy is launching..." больше не отображается, завершаем ожидание
+                if "Proxy is launching..." not in page_content:
+                    is_launching = False
+                else:
+                    await asyncio.sleep(2)
 
-                except asyncio.TimeoutError:
-                    # Если по истечении таймаута навигация не завершилась, проверяем ещё раз
-                    pass
-
-            # После завершения процесса получения прокси получаем текущий URL
+            # Получаем итоговый URL
             short_url = page.url
             logger.info(f"Получен короткий URL: {short_url}")
 
             await browser.close()
 
             # Если мы получили https://m.youtube.com/, то кодируем в Base64
-            if short_url == 'https://m.youtube.com/':
-                base_url = 'https://www.youtube.com'
+            if short_url == 'https://2ip.ru/':
+                base_url = 'https://www.2ip.ru'
                 encoded_url = base64.b64encode(base_url.encode('utf-8')).decode('utf-8')
                 proxy_link = f'https://easyproxy.tech/?__cpo={encoded_url}'
                 logger.info(f"Возвращаем прокси-ссылку: {proxy_link}")
@@ -168,8 +170,6 @@ async def get_actual_link(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     loading_task = asyncio.create_task(animate_loading(message, "Запрашиваем подходящий сервер"))
 
     try:
-        # x = await get_proxy_url(YOUTUBE_URL)
-        # proxy_url = "https://easyproxy.tech/?__cpo=aHR0cHM6Ly93d3cueW91dHViZS5jb20"
         # Получаем прокси-ссылку
         proxy_url = await get_proxy_url(YOUTUBE_URL)
     finally:
@@ -178,11 +178,15 @@ async def get_actual_link(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if proxy_url:
         logger.info(f"Получена прокси-ссылка: {proxy_url}")
+        
+        # Выводим сообщение с самой ссылкой перед отправкой кнопки
+        await update.message.reply_text(f"Вот ссылка, которую мы получили: {proxy_url}")
+        
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("Открыть YouTube", web_app=WebAppInfo(url=proxy_url))]
         ])
         await message.edit_text(
-            "Вот ваша актуальная ссылка для доступа к YouTube. Нажмите на кнопку ниже, чтобы открыть YouTube через наш прокси.",
+            "Нажмите на кнопку ниже, чтобы открыть YouTube через наш прокси.",
             reply_markup=keyboard
         )
     else:
@@ -190,6 +194,7 @@ async def get_actual_link(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.edit_text(
             "Извините, не удалось получить прокси-ссылку. Пожалуйста, попробуйте позже."
         )
+
 
 
 def main() -> None:
