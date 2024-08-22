@@ -59,6 +59,4 @@ jobs:
               }
           }" | sudo tee /etc/nginx/sites-available/youtube_proxy_bot
 
-          sudo ln -sf /etc/nginx/sites-available/youtube_proxy_bot /etc/nginx/sites-enabled/
-          sudo nginx -t && sudo systemctl restart nginx
         EOF
