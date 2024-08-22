@@ -20,19 +20,12 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install -y sshpass
         sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
-          # Обновляем пакеты и устанавливаем необходимые инструменты
+          # Установка необходимых инструментов, если не установлены
           sudo apt-get update
           sudo apt-get install -y docker.io sshpass net-tools
 
-          # Очистка старых образов и контейнеров
-          echo "--- Cleaning up old Docker images and containers ---"
-          sudo docker image prune -af
-          sudo docker container prune -f
-
           # Создаем директорию проекта, если её нет
           mkdir -p /home/$USER/youtube_proxy_bot
-
-          # Выходим из SSH сессии, чтобы выполнить scp
         EOF
 
         # Копируем файлы проекта на сервер
@@ -42,67 +35,39 @@ jobs:
           # Переходим в директорию проекта
           cd /home/$USER/youtube_proxy_bot
 
-          # Проверяем наличие файла proxy.html
-          echo "--- Checking proxy.html ---"
-          ls -l proxy.html || echo "proxy.html not found!"
-
-          # Заменяем placeholders в конфигурации Nginx
-          sed -i "s/SERVER_NAME_PLACEHOLDER/${HOST}/g" nginx_config.conf
-          sed -i "s/USER_PLACEHOLDER/${USER}/g" nginx_config.conf
-
-          # Копируем конфигурацию Nginx
-          sudo cp nginx_config.conf /etc/nginx/sites-available/youtube_proxy_bot
-
-          # Создаем символическую ссылку
-          sudo ln -sf /etc/nginx/sites-available/youtube_proxy_bot /etc/nginx/sites-enabled/
-
-          # Проверяем конфигурацию Nginx
-          echo "--- Nginx configuration ---"
-          cat /etc/nginx/sites-available/youtube_proxy_bot
-
           # Проверяем и устанавливаем правильные права доступа
           sudo chown -R www-data:www-data /home/$USER/youtube_proxy_bot
           sudo chmod -R 755 /home/$USER/youtube_proxy_bot
 
-          # Перезапускаем Nginx
-          sudo nginx -t && sudo systemctl restart nginx
+          # Очистка старых контейнеров и образов только для вашего проекта
+          echo "--- Cleaning up old Docker images and containers ---"
+          sudo docker stop youtube_proxy_bot || true
+          sudo docker rm youtube_proxy_bot || true
+          sudo docker rmi youtube_proxy_bot || true
 
           # Строим Docker образ
           sudo docker build -t youtube_proxy_bot .
 
-          # Останавливаем и удаляем старый контейнер, если он есть
-          sudo docker stop youtube_proxy_bot || true
-          sudo docker rm youtube_proxy_bot || true
-
-          # Запускаем новый контейнер
+          # Запуск нового контейнера
           sudo docker run -d --name youtube_proxy_bot -p 8080:8080 --network host youtube_proxy_bot
 
-          # Отладочная информация
-          echo "--- Nginx status ---"
-          sudo systemctl status nginx
-          
+          # Проверка запуска контейнера
           echo "--- Docker container status ---"
-          sudo docker ps -a
-          
+          sudo docker ps -a | grep youtube_proxy_bot
+
+          if [ "$(sudo docker ps -a -f name=youtube_proxy_bot --format '{{.Status}}' | grep 'Up')" ]; then
+            echo "Контейнер youtube_proxy_bot успешно запущен"
+          else
+            echo "Ошибка запуска контейнера youtube_proxy_bot"
+          fi
+
+          # Отладочная информация
           echo "--- Docker container logs ---"
           sudo docker logs youtube_proxy_bot 2>&1 | tail -n 50
-          
-          echo "--- Netstat for port 8080 on host ---"
-          sudo netstat -tulpn | grep :8080
-
-          echo "--- Testing access to proxy.html ---"
-          curl -I http://localhost/proxy.html
-
-          echo "--- Nginx error log ---"
-          sudo tail -n 50 /var/log/nginx/error.log
 
           echo "--- Directory contents ---"
           ls -R /home/$USER/youtube_proxy_bot
 
           echo "--- Disk usage ---"
           df -h
-
-          # Проверяем содержимое proxy.html
-          echo "--- Content of proxy.html ---"
-          cat /home/$USER/youtube_proxy_bot/proxy.html
         EOF
