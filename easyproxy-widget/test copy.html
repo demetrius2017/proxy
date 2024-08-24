@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy App Launcher</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        #app-launcher {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+        }
+        .app-icon .icon {
+            width: 60px;
+            height: 60px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .app-icon:hover .icon {
+            transform: scale(1.05);
+        }
+        .app-icon .name {
+            margin-top: 8px;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-launcher"></div>
+
+    <form id="hidden-proxy-form" style="display:none;">
+        <input type="text" name="url">
+        <input type="submit">
+    </form>
+    
+    <script>
+    (function() {
+        const apps = [
+            { name: 'YouTube', url: 'https://www.youtube.com', icon: 'https://logo.clearbit.com/youtube.com' },
+            { name: 'Facebook', url: 'https://www.facebook.com', icon: 'https://logo.clearbit.com/facebook.com' },
+            { name: 'Wikipedia', url: 'https://www.wikipedia.org', icon: 'https://logo.clearbit.com/wikipedia.org' },
+            { name: 'Reddit', url: 'https://www.reddit.com', icon: 'https://logo.clearbit.com/reddit.com' },
+            { name: 'Instagram', url: 'https://www.instagram.com', icon: 'https://logo.clearbit.com/instagram.com' },
+            { name: 'TikTok', url: 'https://www.tiktok.com', icon: 'https://logo.clearbit.com/tiktok.com' },
+            { name: 'Twitter', url: 'https://twitter.com', icon: 'https://logo.clearbit.com/twitter.com' },
+            { name: 'Imgur', url: 'https://imgur.com', icon: 'https://logo.clearbit.com/imgur.com' },
+            { name: 'Twitch', url: 'https://www.twitch.tv', icon: 'https://logo.clearbit.com/twitch.tv' }
+        ];
+
+        function createAppLauncher() {
+            const container = document.getElementById('app-launcher');
+            
+            apps.forEach(app => {
+                const appLink = document.createElement('a');
+                appLink.href = '#';
+                appLink.className = 'app-icon';
+                appLink.onclick = (e) => {
+                    e.preventDefault();
+                    submitUrl(app.url);
+                };
+
+                const icon = document.createElement('div');
+                icon.className = 'icon';
+                icon.style.backgroundImage = `url(${app.icon})`;
+
+                const name = document.createElement('span');
+                name.className = 'name';
+                name.textContent = app.name;
+
+                appLink.appendChild(icon);
+                appLink.appendChild(name);
+                container.appendChild(appLink);
+            });
+        }
+
+        function submitUrl(url) {
+            const form = document.getElementById('hidden-proxy-form');
+            const input = form.querySelector('input[name="url"]');
+            const submit = form.querySelector('input[type="submit"]');
+
+            if (input && submit) {
+                input.value = url;
+                submit.click();
+            }
+        }
+
+        createAppLauncher();
+    })();
+    </script>
+</body>
+</html>
