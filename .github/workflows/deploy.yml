@@ -3,7 +3,7 @@ name: Deploy Telegram Bot to Server
 on:
   push:
     branches:
-      - main  # Измените на master, если ваша основная ветка называется master
+      - master  # Измените на master, если ваша основная ветка называется master
 
 jobs:
   deploy:
