@@ -19,7 +19,7 @@ jobs:
       env:
         HOST: ${{ secrets.HOST }}
         USER: ${{ secrets.USER }}
-        PASS: ${{ secrets.SSH_PRIVATE_KEY }}
+        PASS: ${{ secrets.PASSWORD }}
       run: |
         mkdir -p ~/.ssh
         echo "$PASS" > ~/.ssh/id_rsa
