@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Модифицированный EasyProxy виджет</title>
+    <style>
+        #custom-proxy-links {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+        }
+        #custom-proxy-links .icons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+        #custom-proxy-links .links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #custom-proxy-links a {
+            margin: 0 5px;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        #custom-proxy-links img {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест модифицированного EasyProxy виджета</h1>
+    
+    <div id="custom-proxy-links"></div>
+
+    <!-- Скрытая форма для отправки запросов -->
+    <form id="hidden-proxy-form" style="display:none;">
+        <input type="text" name="url">
+        <input type="submit">
+    </form>
+    
+    <script>
+    (function() {
+        const sites = [
+            { name: 'YouTube', url: 'https://www.youtube.com' },
+            { name: 'Facebook', url: 'https://www.facebook.com' },
+            { name: 'Wikipedia', url: 'https://www.wikipedia.org' },
+            { name: 'Reddit', url: 'https://www.reddit.com' },
+            { name: 'Instagram', url: 'https://www.instagram.com' },
+            { name: 'TikTok', url: 'https://www.tiktok.com' },
+            { name: 'Twitter', url: 'https://twitter.com' },
+            { name: 'Imgur', url: 'https://imgur.com' },
+            { name: 'Twitch', url: 'https://www.twitch.tv' }
+        ];
+
+        function createCustomLinks() {
+            const container = document.getElementById('custom-proxy-links');
+            
+            const iconsDiv = document.createElement('div');
+            iconsDiv.className = 'icons';
+            
+            const linksDiv = document.createElement('div');
+            linksDiv.className = 'links';
+
+            sites.forEach(site => {
+                // Создаем иконку
+                const icon = document.createElement('img');
+                icon.src = `https://www.google.com/s2/favicons?domain=${site.url}`;
+                icon.alt = site.name;
+                icon.onclick = () => submitUrl(site.url);
+                iconsDiv.appendChild(icon);
+
+                // Создаем текстовую ссылку
+                const link = document.createElement('a');
+                link.href = '#';
+                link.textContent = site.name;
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    submitUrl(site.url);
+                };
+                linksDiv.appendChild(link);
+            });
+
+            container.appendChild(iconsDiv);
+            container.appendChild(linksDiv);
+        }
+
+        function submitUrl(url) {
+            const form = document.getElementById('hidden-proxy-form');
+            const input = form.querySelector('input[name="url"]');
+            const submit = form.querySelector('input[type="submit"]');
+
+            if (input && submit) {
+                input.value = url;
+                submit.click();
+            }
+        }
+
+        createCustomLinks();
+    })();
+    </script>
+</body>
+</html>
