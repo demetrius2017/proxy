@@ -1,36 +1,27 @@
-import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler
 
-# Замените на свой токен
-TOKEN = "6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE"
-
-# Обновленный URL вашего Web App (без HTTPS, так как у нас пока нет SSL)
-WEBAPP_URL = "http://94.241.174.212"
-
-# Настройка логирования
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Отправляет приветственное сообщение с кнопкой для запуска Web App."""
+async def start(update: Update, context):
+    # Создаем правильный формат для клавиатуры
+    keyboard = [
+        [InlineKeyboardButton(text="для Android жми", web_app=WebAppInfo(url="https://appproxy.vercel.app/"))]
+    ]
+    
+    # Создаем объект InlineKeyboardMarkup с кнопками
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Отправляем сообщение с кнопкой и ссылкой
     await update.message.reply_text(
-        "Добро пожаловать! Нажмите кнопку ниже, чтобы открыть Proxy App Launcher:",
-        reply_markup={
-            "keyboard": [[{"text": "Start Proxy App Launcher", "web_app": {"url": WEBAPP_URL}}]],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
-        }
+        text="Для iPhone, открыть ссылку через Chrome браузер (для этого нажав и удерживая ссылку ниже выберрете отрыть в Chrome): "
+             "https://appproxy.vercel.app/",
+        reply_markup=reply_markup
     )
 
+# Инициализация бота
+application = ApplicationBuilder().token('6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE').build()
 
-def main() -> None:
-    """Запускает бота и веб-сервер."""
+# Добавляем обработчик команды /start
+application.add_handler(CommandHandler('start', start))
 
-    # Настройка и запуск Telegram бота
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.run_polling()
-
-if __name__ == "__main__":
-    main()
+# Запуск бота
+application.run_polling()
