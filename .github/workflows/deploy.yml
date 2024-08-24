@@ -3,7 +3,7 @@ name: Deploy Telegram Bot to Server
 on:
   push:
     branches:
-      - master  # Измените на master, если ваша основная ветка называется master
+      - master
 
 jobs:
   deploy:
@@ -21,23 +21,38 @@ jobs:
         USER: ${{ secrets.USER }}
         PASS: ${{ secrets.PASSWORD }}
       run: |
+        sshpass -p $PASS scp -r ./* $USER@$HOST:/home/$USER/telegram_proxy_bot/
         sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+          cd /home/$USER/telegram_proxy_bot
+          
+          # Создаем Dockerfile, если его нет
+          if [ ! -f Dockerfile ]; then
+            echo "FROM python:3.9-slim" > Dockerfile
+            echo "WORKDIR /app" >> Dockerfile
+            echo "COPY requirements.txt ." >> Dockerfile
+            echo "RUN pip install --no-cache-dir -r requirements.txt" >> Dockerfile
+            echo "COPY . ." >> Dockerfile
+            echo "CMD [\"python\", \"main.py\"]" >> Dockerfile
+          fi
+          
+          # Создаем requirements.txt, если его нет
+          if [ ! -f requirements.txt ]; then
+            echo "python-telegram-bot==20.3" > requirements.txt
+          fi
+          
           # Обновляем пакеты и устанавливаем Docker, если его нет
           sudo apt-get update
           if ! command -v docker &> /dev/null; then
             sudo apt-get install -y docker.io
           fi
-          # Создаем директорию проекта, если её нет
-          mkdir -p /home/$USER/telegram_proxy_bot
-          # Копируем файлы проекта на сервер
-          sshpass -p $PASS scp -r ./* $USER@$HOST:/home/$USER/telegram_proxy_bot/
-          # Переходим в директорию проекта
-          cd /home/$USER/telegram_proxy_bot
+          
           # Строим Docker образ
           sudo docker build -t telegram_proxy_bot .
+          
           # Останавливаем и удаляем старый контейнер, если он есть
           sudo docker stop telegram_proxy_bot || true
           sudo docker rm telegram_proxy_bot || true
+          
           # Запускаем новый контейнер
           sudo docker run -d --name telegram_proxy_bot -p 80:80 --restart always telegram_proxy_bot
         EOF
