@@ -21,8 +21,8 @@ jobs:
         USER: ${{ secrets.USER }}
         PASS: ${{ secrets.PASSWORD }}
       run: |
-        sshpass -p $PASS scp -r ./* $USER@$HOST:/home/$USER/telegram_proxy_bot/
-        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST
+        << EOF
           cd /home/$USER/telegram_proxy_bot
           
           # Создаем Dockerfile, если его нет
