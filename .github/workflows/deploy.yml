@@ -48,11 +48,14 @@ jobs:
                   proxy_pass http://localhost:8080;
                   proxy_set_header Host \$host;
                   proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto \$scheme;
               }
           }
           EON
 
           sudo ln -sf /etc/nginx/sites-available/youtube_proxy_bot /etc/nginx/sites-enabled/
+          sudo rm -f /etc/nginx/sites-enabled/default  # Удаляем дефолтный сайт
           sudo nginx -t && sudo systemctl restart nginx
         EOF
 
@@ -62,13 +65,25 @@ jobs:
         sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
           cd /home/$USER/youtube_proxy_bot
 
-          # Проверяем наличие файла index.html
-          echo "--- Checking index.html ---"
-          ls -l index.html || echo "index.html not found!"
+          # Проверяем наличие необходимых файлов
+          echo "--- Checking files ---"
+          ls -l main.py index.html requirements.txt
 
           # Проверяем и устанавливаем правильные права доступа
           sudo chown -R www-data:www-data /home/$USER/youtube_proxy_bot
           sudo chmod -R 755 /home/$USER/youtube_proxy_bot
+
+          # Обновляем Dockerfile
+          cat > Dockerfile << EOD
+          FROM python:3.9-slim
+          WORKDIR /app
+          COPY requirements.txt .
+          RUN pip install --no-cache-dir -r requirements.txt
+          COPY main.py .
+          COPY index.html .
+          EXPOSE 8080
+          CMD ["python", "main.py"]
+          EOD
 
           # Строим Docker образ
           sudo docker build -t youtube_proxy_bot .
@@ -89,11 +104,11 @@ jobs:
           echo "--- Netstat for port 8080 on host ---"
           sudo netstat -tulpn | grep :8080
 
-          echo "--- Testing access to index.html via Docker container ---"
-          curl -I http://localhost:8080/index.html
+          echo "--- Testing access to the application ---"
+          curl -I http://localhost:8080/
 
-          echo "--- Testing access to index.html via Nginx ---"
-          curl -I http://localhost/index.html
+          echo "--- Testing access through Nginx ---"
+          curl -I http://localhost/
 
           echo "--- Nginx status ---"
           sudo systemctl status nginx
@@ -101,8 +116,14 @@ jobs:
           echo "--- Nginx error log ---"
           sudo tail -n 50 /var/log/nginx/error.log
 
+          echo "--- Nginx access log ---"
+          sudo tail -n 50 /var/log/nginx/access.log
+
           echo "--- Directory contents ---"
           ls -R /home/$USER/youtube_proxy_bot
+
+          echo "--- Content of main.py ---"
+          cat /home/$USER/youtube_proxy_bot/main.py
 
           echo "--- Disk usage ---"
           df -h
