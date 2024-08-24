@@ -21,47 +21,46 @@ jobs:
         USER: ${{ secrets.USER }}
         PASS: ${{ secrets.PASSWORD }}
       run: |
-        mkdir -p ~/.ssh
-        echo "$PASS" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+        # Проверка подключения
+        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST echo "Connection successful"
 
-        ssh $USER@$HOST << EOF
-          # Update packages and install necessary tools
+        # Основной скрипт развертывания
+        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
+          # Обновляем пакеты и устанавливаем необходимые инструменты
           sudo apt-get update
           sudo apt-get install -y docker.io net-tools
 
-          # Clean up old Docker images and containers
+          # Очистка старых образов и контейнеров
           echo "--- Cleaning up old Docker images and containers ---"
           sudo docker image prune -af
           sudo docker container prune -f
 
-          # Create project directory if it doesn't exist
+          # Создаем директорию проекта, если её нет
           mkdir -p /home/$USER/youtube_proxy_bot
         EOF
 
-        # Copy project files to the server
-        scp -r ./* $USER@$HOST:/home/$USER/youtube_proxy_bot/
+        # Копируем файлы проекта на сервер
+        sshpass -p $PASS scp -o StrictHostKeyChecking=no -r ./* $USER@$HOST:/home/$USER/youtube_proxy_bot/
 
-        ssh $USER@$HOST << EOF
+        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
           cd /home/$USER/youtube_proxy_bot
 
-          # Check for index.html
+          # Проверяем наличие файла index.html
           echo "--- Checking index.html ---"
           ls -l index.html || echo "index.html not found!"
 
-          # Set correct permissions
+          # Проверяем и устанавливаем правильные права доступа
           sudo chown -R www-data:www-data /home/$USER/youtube_proxy_bot
           sudo chmod -R 755 /home/$USER/youtube_proxy_bot
 
-          # Build Docker image
+          # Строим Docker образ
           sudo docker build -t youtube_proxy_bot .
 
-          # Stop and remove old container if it exists
+          # Останавливаем и удаляем старый контейнер, если он есть
           sudo docker stop youtube_proxy_bot || true
           sudo docker rm youtube_proxy_bot || true
 
-          # Run new container
+          # Запускаем новый контейнер
           sudo docker run -d --name youtube_proxy_bot -p 8080:8080 youtube_proxy_bot
 
           echo "--- Docker container status ---"
@@ -85,5 +84,3 @@ jobs:
           echo "--- Content of index.html ---"
           cat /home/$USER/youtube_proxy_bot/index.html
         EOF
-
-        rm -f ~/.ssh/id_rsa
