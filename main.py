@@ -38,13 +38,14 @@ def run_flask():
 def main() -> None:
     """Запускает бота и веб-сервер."""
     # Запуск Flask в отдельном потоке
+    run_flask()
     flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
+    # flask_thread.start()
 
-    # Настройка и запуск Telegram бота
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.run_polling()
+    # # Настройка и запуск Telegram бота
+    # application = Application.builder().token(TOKEN).build()
+    # application.add_handler(CommandHandler("start", start))
+    # application.run_polling()
 
 if __name__ == "__main__":
     main()
