@@ -1,6 +1,1 @@
-aiohttp==3.8.5
-beautifulsoup4==4.12.2
-playwright==1.39.0
-python-telegram-bot==20.6
-base64
-requests
+python-telegram-bot==20.3
