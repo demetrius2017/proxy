@@ -17,7 +17,7 @@ async def start(update: Update, context):
     )
 
 # Инициализация бота
-application = ApplicationBuilder().token('7205474470:AAF5gNWm2mdtAJMbHa5Uj7LWg2y58sgI_NA').build()
+application = ApplicationBuilder().token('6999067648:AAEIGc8oaNf85PtbTVZjfaNW8ySApzn-qHc').build()
 
 # Добавляем обработчик команды /start
 application.add_handler(CommandHandler('start', start))
