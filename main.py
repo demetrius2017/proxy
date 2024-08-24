@@ -2,36 +2,35 @@ from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMar
 from telegram.ext import ApplicationBuilder, CommandHandler
 
 async def start(update: Update, context):
-    await send_main_message(update, context)
+    # Обновление команд меню
+    commands = [
+        BotCommand("start", "Начать работу с ботом")
+    ]
+    await context.bot.set_my_commands(commands)
 
-async def send_main_message(update: Update, context):
+    # Создание клавиатуры
     keyboard = [
         [InlineKeyboardButton(text="для Android жми", web_app=WebAppInfo(url="https://appproxy.vercel.app/"))]
     ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    # Отправка сообщения
     await update.message.reply_text(
         text="Для iPhone, открыть ссылку через Chrome браузер (для этого нажав и удерживая ссылку ниже выберите открыть в Chrome): "
              "https://appproxy.vercel.app/",
         reply_markup=reply_markup
     )
 
-async def setup_commands(application):
-    commands = [
-        BotCommand("start", "Начать работу с ботом"),
-    ]
-    await application.bot.set_my_commands(commands)
+def main():
+    # Инициализация бота
+    application = ApplicationBuilder().token('6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE').build()
 
-# Инициализация бота
-application = ApplicationBuilder().token('6740830002:AAFcw7PqsWgGp4cJna24vofPtU1P2dCT4yE').build()
+    # Добавляем обработчик команды start
+    application.add_handler(CommandHandler('start', start))
 
-# Добавляем обработчики команд
-application.add_handler(CommandHandler('start', start))
-application.add_handler(CommandHandler('restart', restart))
+    # Запуск бота
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-# Настройка команд меню
-application.create_task(setup_commands(application))
-
-# Запуск бота
-application.run_polling()
+if __name__ == '__main__':
+    main()
