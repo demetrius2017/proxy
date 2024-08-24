@@ -28,7 +28,7 @@ jobs:
         sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
           # Обновляем пакеты и устанавливаем необходимые инструменты
           sudo apt-get update
-          sudo apt-get install -y docker.io net-tools
+          sudo apt-get install -y docker.io net-tools nginx
 
           # Очистка старых образов и контейнеров
           echo "--- Cleaning up old Docker images and containers ---"
@@ -37,6 +37,23 @@ jobs:
 
           # Создаем директорию проекта, если её нет
           mkdir -p /home/$USER/youtube_proxy_bot
+
+          # Настройка Nginx для проксирования на порт 8080
+          sudo tee /etc/nginx/sites-available/youtube_proxy_bot << EON
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  proxy_pass http://localhost:8080;
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+              }
+          }
+          EON
+
+          sudo ln -sf /etc/nginx/sites-available/youtube_proxy_bot /etc/nginx/sites-enabled/
+          sudo nginx -t && sudo systemctl restart nginx
         EOF
 
         # Копируем файлы проекта на сервер
@@ -72,8 +89,17 @@ jobs:
           echo "--- Netstat for port 8080 on host ---"
           sudo netstat -tulpn | grep :8080
 
-          echo "--- Testing access to index.html ---"
+          echo "--- Testing access to index.html via Docker container ---"
           curl -I http://localhost:8080/index.html
+
+          echo "--- Testing access to index.html via Nginx ---"
+          curl -I http://localhost/index.html
+
+          echo "--- Nginx status ---"
+          sudo systemctl status nginx
+
+          echo "--- Nginx error log ---"
+          sudo tail -n 50 /var/log/nginx/error.log
 
           echo "--- Directory contents ---"
           ls -R /home/$USER/youtube_proxy_bot
