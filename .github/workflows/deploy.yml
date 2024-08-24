@@ -1,51 +1,89 @@
-name: Check and Deploy Telegram Bot
+name: Deploy to Server
 
 on:
   push:
     branches:
       - master
-  workflow_dispatch:
 
 jobs:
-  check-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
     - name: Install sshpass
-      run: sudo apt-get install sshpass
+      run: sudo apt-get update && sudo apt-get install -y sshpass
 
-    - name: Check and manage containers
+    - name: Deploy to server
       env:
         HOST: ${{ secrets.HOST }}
         USER: ${{ secrets.USER }}
-        PASS: ${{ secrets.PASSWORD }}
+        PASS: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
-          echo "Checking running Docker containers..."
-          sudo docker ps -a
-          
-          echo "Checking Docker images..."
-          sudo docker images
-          
-          echo "Stopping and removing old telegram_proxy_bot container..."
-          sudo docker stop telegram_proxy_bot || true
-          sudo docker rm telegram_proxy_bot || true
-          
-          echo "Removing old telegram_proxy_bot image..."
-          sudo docker rmi telegram_proxy_bot || true
-          
-          echo "Building new Docker image..."
-          cd ~/telegram_proxy_bot
-          sudo docker build -t telegram_proxy_bot .
-          
-          echo "Running new container..."
-          sudo docker run -d --name telegram_proxy_bot -p 80:80 --restart always telegram_proxy_bot
-          
-          echo "Checking running containers after deployment..."
-          sudo docker ps -a
-          
-          echo "Checking logs of the new container..."
-          sudo docker logs telegram_proxy_bot
+        mkdir -p ~/.ssh
+        echo "$PASS" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+        ssh $USER@$HOST << EOF
+          # Update packages and install necessary tools
+          sudo apt-get update
+          sudo apt-get install -y docker.io net-tools
+
+          # Clean up old Docker images and containers
+          echo "--- Cleaning up old Docker images and containers ---"
+          sudo docker image prune -af
+          sudo docker container prune -f
+
+          # Create project directory if it doesn't exist
+          mkdir -p /home/$USER/youtube_proxy_bot
         EOF
+
+        # Copy project files to the server
+        scp -r ./* $USER@$HOST:/home/$USER/youtube_proxy_bot/
+
+        ssh $USER@$HOST << EOF
+          cd /home/$USER/youtube_proxy_bot
+
+          # Check for index.html
+          echo "--- Checking index.html ---"
+          ls -l index.html || echo "index.html not found!"
+
+          # Set correct permissions
+          sudo chown -R www-data:www-data /home/$USER/youtube_proxy_bot
+          sudo chmod -R 755 /home/$USER/youtube_proxy_bot
+
+          # Build Docker image
+          sudo docker build -t youtube_proxy_bot .
+
+          # Stop and remove old container if it exists
+          sudo docker stop youtube_proxy_bot || true
+          sudo docker rm youtube_proxy_bot || true
+
+          # Run new container
+          sudo docker run -d --name youtube_proxy_bot -p 8080:8080 youtube_proxy_bot
+
+          echo "--- Docker container status ---"
+          sudo docker ps -a
+          
+          echo "--- Docker container logs ---"
+          sudo docker logs youtube_proxy_bot 2>&1 | tail -n 50
+          
+          echo "--- Netstat for port 8080 on host ---"
+          sudo netstat -tulpn | grep :8080
+
+          echo "--- Testing access to index.html ---"
+          curl -I http://localhost:8080/index.html
+
+          echo "--- Directory contents ---"
+          ls -R /home/$USER/youtube_proxy_bot
+
+          echo "--- Disk usage ---"
+          df -h
+
+          echo "--- Content of index.html ---"
+          cat /home/$USER/youtube_proxy_bot/index.html
+        EOF
+
+        rm -f ~/.ssh/id_rsa
