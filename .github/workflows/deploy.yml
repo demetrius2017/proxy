@@ -1,12 +1,13 @@
-name: Deploy Telegram Bot to Server
+name: Check and Deploy Telegram Bot
 
 on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  check-and-deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -15,84 +16,36 @@ jobs:
     - name: Install sshpass
       run: sudo apt-get install sshpass
 
-    - name: Deploy to server
+    - name: Check and manage containers
       env:
         HOST: ${{ secrets.HOST }}
         USER: ${{ secrets.USER }}
         PASS: ${{ secrets.PASSWORD }}
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       run: |
         sshpass -p $PASS ssh -o StrictHostKeyChecking=no $USER@$HOST << EOF
-          set -e
-          echo "Stopping and removing all Docker containers..."
-          sudo docker stop $(sudo docker ps -a -q) || true
-          sudo docker rm $(sudo docker ps -a -q) || true
+          echo "Checking running Docker containers..."
+          sudo docker ps -a
           
-          echo "Removing old Docker images..."
+          echo "Checking Docker images..."
+          sudo docker images
+          
+          echo "Stopping and removing old telegram_proxy_bot container..."
+          sudo docker stop telegram_proxy_bot || true
+          sudo docker rm telegram_proxy_bot || true
+          
+          echo "Removing old telegram_proxy_bot image..."
           sudo docker rmi telegram_proxy_bot || true
           
-          echo "Setting up project directory..."
-          mkdir -p ~/telegram_proxy_bot
+          echo "Building new Docker image..."
           cd ~/telegram_proxy_bot
-          
-          echo "Creating Dockerfile..."
-          cat << EOT > Dockerfile
-          FROM python:3.9-slim
-          WORKDIR /app
-          COPY requirements.txt .
-          RUN pip install --no-cache-dir -r requirements.txt
-          COPY . .
-          CMD ["python", "main.py"]
-          EOT
-          
-          echo "Creating requirements.txt..."
-          echo "python-telegram-bot==20.3" > requirements.txt
-          
-          echo "Creating main.py..."
-          cat << EOT > main.py
-          import logging
-          from telegram import Update, WebAppInfo
-          from telegram.ext import Application, CommandHandler, ContextTypes
-
-          TOKEN = "$BOT_TOKEN"
-          WEBAPP_URL = "http://$HOST/index.html"
-
-          logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-          logger = logging.getLogger(__name__)
-
-          async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-              await update.message.reply_text(
-                  "Welcome! Click the button below to open Proxy App Launcher:",
-                  reply_markup={
-                      "keyboard": [[{"text": "Start Proxy App Launcher", "web_app": {"url": WEBAPP_URL}}]],
-                      "resize_keyboard": True,
-                      "one_time_keyboard": True
-                  }
-              )
-
-          def main() -> None:
-              application = Application.builder().token(TOKEN).build()
-              application.add_handler(CommandHandler("start", start))
-              application.run_polling()
-
-          if __name__ == "__main__":
-              main()
-          EOT
-          
-          echo "Creating index.html..."
-          echo "<div id='app-launcher'></div>" > index.html
-          
-          echo "Updating packages and installing Docker if needed..."
-          sudo apt-get update
-          if ! command -v docker &> /dev/null; then
-            sudo apt-get install -y docker.io
-          fi
-          
-          echo "Building Docker image..."
           sudo docker build -t telegram_proxy_bot .
           
           echo "Running new container..."
           sudo docker run -d --name telegram_proxy_bot -p 80:80 --restart always telegram_proxy_bot
           
-          echo "Deployment completed successfully!"
+          echo "Checking running containers after deployment..."
+          sudo docker ps -a
+          
+          echo "Checking logs of the new container..."
+          sudo docker logs telegram_proxy_bot
         EOF
