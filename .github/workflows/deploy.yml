@@ -3,7 +3,7 @@ name: Deploy Telegram Bot to Server
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
