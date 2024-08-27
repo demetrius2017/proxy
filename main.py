@@ -48,7 +48,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         instructions = (
             "Инструкция для пользователей iPhone:\n\n"
             "1. Зажмите и удерживайте эту ссылку: https://appproxy.vercel.app/\n"
-            "2. Открыть в ... "
+            "2. Открыть в ...\n"
             "3. Выберете браузер Chrome\n\n"
             "Готово! Теперь вы можете использовать App Launcher на вашем iPhone."
         )
