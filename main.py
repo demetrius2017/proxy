@@ -1,6 +1,7 @@
 from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 import logging
+from user_manager import save_user_id, export_user_ids
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -12,11 +13,16 @@ ANDROID_TEXT = "Открыть App Launcher для Android"
 IOS_TEXT = "Инструкция для iPhone"
 
 async def send_start_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Сохраняем ID пользователя
+    user_id = update.effective_user.id
+    save_user_id(user_id)
+
     # Обновление команд меню
     commands = [
         BotCommand("start", "Начать работу с ботом"),
         BotCommand("help", "Получить помощь"),
-        BotCommand("about", "О нашем сервисе")
+        BotCommand("about", "О нашем сервисе"),
+        BotCommand("export_users", "Экспорт ID пользователей (только для админов)")
     ]
     await context.bot.set_my_commands(commands)
 
@@ -77,6 +83,22 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(about_text)
 
+async def export_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # В реальном приложении здесь должна быть проверка на права администратора
+    # Сейчас мы просто проверяем, установлен ли флаг is_admin
+    if not context.user_data.get('is_admin', False):
+        await update.message.reply_text("У вас нет прав для выполнения этой команды.")
+        return
+
+    output_file = export_user_ids()
+    await update.message.reply_document(document=open(output_file, 'rb'), filename=output_file)
+
+async def set_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Здесь должна быть проверка, является ли пользователь действительно администратором
+    # В данном примере мы просто устанавливаем флаг для текущего пользователя
+    context.user_data['is_admin'] = True
+    await update.message.reply_text("Вы установлены как администратор.")
+
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Exception while handling an update: {context.error}")
 
@@ -89,6 +111,8 @@ def main():
     application.add_handler(CommandHandler('help', help_command))
     application.add_handler(CommandHandler('about', about_command))
     application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(CommandHandler('export_users', export_users))
+    application.add_handler(CommandHandler('set_admin', set_admin))
 
     # Добавляем обработчик ошибок
     application.add_error_handler(error_handler)
