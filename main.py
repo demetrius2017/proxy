@@ -12,6 +12,27 @@ WEB_APP_URL = "https://appproxy.vercel.app/"
 ANDROID_TEXT = "Открыть App Launcher для Android"
 IOS_TEXT = "Инструкция для iPhone"
 
+
+# Список ID администраторов (замените на реальные ID)
+ADMIN_IDS = [138503110, 5882393609]  # Замените эти числа на реальные ID администраторов
+
+async def set_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in ADMIN_IDS:
+        context.user_data['is_admin'] = True
+        await update.message.reply_text("Вы успешно авторизованы как администратор.")
+    else:
+        await update.message.reply_text("У вас нет прав для выполнения этой команды.")
+
+# Обновленная функция export_users с проверкой на администратора
+async def export_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in ADMIN_IDS and context.user_data.get('is_admin', False):
+        output_file = export_user_ids()
+        await update.message.reply_document(document=open(output_file, 'rb'), filename=output_file)
+    else:
+        await update.message.reply_text("У вас нет прав для выполнения этой команды.")
+
 async def send_start_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Сохраняем ID пользователя
     user_id = update.effective_user.id
@@ -83,21 +104,6 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(about_text)
 
-async def export_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # В реальном приложении здесь должна быть проверка на права администратора
-    # Сейчас мы просто проверяем, установлен ли флаг is_admin
-    if not context.user_data.get('is_admin', False):
-        await update.message.reply_text("У вас нет прав для выполнения этой команды.")
-        return
-
-    output_file = export_user_ids()
-    await update.message.reply_document(document=open(output_file, 'rb'), filename=output_file)
-
-async def set_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Здесь должна быть проверка, является ли пользователь действительно администратором
-    # В данном примере мы просто устанавливаем флаг для текущего пользователя
-    context.user_data['is_admin'] = True
-    await update.message.reply_text("Вы установлены как администратор.")
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Exception while handling an update: {context.error}")
