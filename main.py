@@ -43,7 +43,7 @@ async def send_start_message(update: Update, context: ContextTypes.DEFAULT_TYPE)
         BotCommand("start", "Начать работу с ботом"),
         BotCommand("help", "Получить помощь"),
         BotCommand("about", "О нашем сервисе"),
-        BotCommand("export_users", "Экспорт ID пользователей (только для админов)")
+        # BotCommand("export_users", "Экспорт ID пользователей (только для админов)")
     ]
     await context.bot.set_my_commands(commands)
 
@@ -117,8 +117,8 @@ def main():
     application.add_handler(CommandHandler('help', help_command))
     application.add_handler(CommandHandler('about', about_command))
     application.add_handler(CallbackQueryHandler(button_callback))
-    application.add_handler(CommandHandler('export_users', export_users))
-    application.add_handler(CommandHandler('set_admin', set_admin))
+    # application.add_handler(CommandHandler('export_users', export_users))
+    # application.add_handler(CommandHandler('set_admin', set_admin))
 
     # Добавляем обработчик ошибок
     application.add_error_handler(error_handler)
